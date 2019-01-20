@@ -1,9 +1,13 @@
+// Defined limits on the string table 
+#define DISTINCT_IDS 500
+#define STRING_TABLE_SIZE 4096
+
 // Define the end of file special to match LEX/YACC speciticiations
 #define EOFnum 0
 
 #define ANDnum 1
 #define ASSGNnum 2
-#define DECLARATIONnum 3
+#define DECLARATIONSnum 3
 #define DOTnum 4
 #define ENDDECLARATIONSnum 5
 #define EQUALnum 6
@@ -42,5 +46,8 @@
 #define VOIDnum 39
 
 // Define yyline/yycolumn global to ease driver implementation
+extern int yylval;
 extern int yyline;
 extern int yycolumn;
+extern int table_index;
+extern char string_table[STRING_TABLE_SIZE];

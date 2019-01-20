@@ -1,16 +1,21 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "Tokens.h"
 
+int yylex();
+
 char* get_token(int token) {
   switch (token) {
+    case EOFnum:
+      return "EOFnum";
     case ANDnum:
       return "ANDnum";
     case ASSGNnum:
       return "ASSGNnum";
-    case DECLARATIONnum:
-      return "DECLARATIONnum";
+    case DECLARATIONSnum:
+      return "DECLARATIONSnum";
     case DOTnum:
       return "DOTnum";
     case ENDDECLARATIONSnum:
@@ -86,28 +91,43 @@ char* get_token(int token) {
   }
 }
 
+void report_string_table() {
+  printf("\nString Table :");
+  for (int i = 0; i < table_index; i++) {
+    printf(" %s", &(string_table[i]));
+    i += strlen(&string_table[i]);
+  }
+
+  printf("\n");
+}
+
 void report_token(int token, int table_in_index) {
-  if (table_in_index >= 0) {
+  if (SCONSTnum == token) {
     printf("%d\t%d\t%s\t\t%d\n", yyline, yycolumn, get_token(token), table_in_index);
+  } else if (IDnum == token) { 
+    printf("%d\t%d\t%s\t\t\t%d\n", yyline, yycolumn, get_token(token), table_in_index);
   } else {
     printf("%d\t%d\t%s\n", yyline, yycolumn, get_token(token));
   }
 }
 
 int main() {
-  printf("Line\tColumn\tToken\t\tIndex_in_String_table\n");
+  printf("Line\tColumn\tToken\t\t\tIndex in String table\n");
 
   bool eof = false;
   while (!eof) {
     int token = yylex();
 
-    if (EOFnum == token) {
-      printf("File fully processed.\n");
-      eof = true;
+    if (SCONSTnum == token || IDnum == token) { 
+      report_token(token, yylval);
     } else {
       report_token(token, -1);
+
+      eof = EOFnum == token;
     }
   }
+
+  report_string_table();
 }
 
 int yywrap() {

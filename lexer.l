@@ -344,7 +344,8 @@ void process_comment() {
       // If this is the first new line, then the column index
       // is equal to the number of characters processed.
       if (!first_new_line_found) {
-        yycolumn = strlen(yytext) - i;
+        // Add a one to account for one-indexing 
+        yycolumn = strlen(yytext) - i + 1;
       }
 
       yyline++;

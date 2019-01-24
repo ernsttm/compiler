@@ -1,5 +1,5 @@
 build : lex
-	gcc -o lexer lex.yy.c driver.c
+	gcc -std=c99 -o lexer lex.yy.c driver.c
 
 lex :
 	lex lexer.l

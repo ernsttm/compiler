@@ -1,3 +1,6 @@
+/**
+ * Todd M. Ernst 2019
+ */
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>

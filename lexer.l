@@ -1,3 +1,6 @@
+  /**
+   * Todd M. Ernst 2019
+   */
   #include <stdbool.h>
   #include "Tokens.h"
 
@@ -307,6 +310,10 @@ WS [ \t]
 
   increment_column();
   continue;
+}
+
+<<EOF>> {
+  return EOFnum;
 }
 
 %%

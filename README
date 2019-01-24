@@ -1,1 +1,19 @@
-This is an implementation of MINI-Java implementation for compilers.
+Todd M. Ernst CS2210 Compilers
+
+This contains an implementation of a MINI Java compiler.
+
+To build this project simple run make, on a machine with a gcc 
+installed which supports at least the C99 standard.
+
+To test this project against the set of provided input cases, and 
+compare using the standard linux utility run
+
+make test
+
+Note: The tests use the -b flag to ignore trivial differences
+in white space.
+
+Finally to clean all files created during the building or 
+testing of this executable run 
+
+make clean

@@ -1,3 +1,7 @@
+/**
+ * Todd M. Ernst
+ */ 
+
 // Defined limits on the string table 
 #define DISTINCT_IDS 500
 #define STRING_TABLE_SIZE 4096

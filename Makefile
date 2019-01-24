@@ -5,7 +5,8 @@ lex :
 	lex lexer.l
 
 clean : 
-	rm lexer lex.yy.c
+	-rm lexer lex.yy.c
+	-rm -r test_cases
 
 test : clean build
 	./test_phase_one.sh

@@ -1,3 +1,6 @@
+  /**
+   * Todd M. Ernst 2019
+   */
   #include <stdbool.h>
   #include "Tokens.h"
 
@@ -309,6 +312,10 @@ WS [ \t]
   continue;
 }
 
+<<EOF>> {
+  return EOFnum;
+}
+
 %%
 int handle_string(char* string) {
   for (int i = 0; i < table_index; i++) {
@@ -344,7 +351,8 @@ void process_comment() {
       // If this is the first new line, then the column index
       // is equal to the number of characters processed.
       if (!first_new_line_found) {
-        yycolumn = strlen(yytext) - i;
+        // Add a one to account for one-indexing 
+        yycolumn = strlen(yytext) - i + 1;
       }
 
       yyline++;

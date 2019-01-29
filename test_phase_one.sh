@@ -1,5 +1,7 @@
 #! /bin/sh -
 
+# Todd M. Ernst 2019
+
 INPUT_DIR=proj1_tests
 OUTPUT_DIR=test_cases/phase_1
 

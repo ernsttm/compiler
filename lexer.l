@@ -2,19 +2,16 @@
    * Todd M. Ernst 2019
    */
   #include <stdbool.h>
-  #include "Tokens.h"
 
   int handle_string();
   void increment_column();
   void process_comment();
   void ReportError(char* message);
 
-  int yylval;
   int yyline = 1;
   int yycolumn = 1;
 
   int table_index = 0;
-  char string_table[STRING_TABLE_SIZE];
 
 DIGIT [0-9]
 
@@ -214,7 +211,7 @@ WS [ \t]
 {DIGIT}+ {
   increment_column();
 
-  yylval = atoi(yytext);
+  yylval.intg = atoi(yytext);
   return ICONSTnum;
 }
 
@@ -248,7 +245,7 @@ WS [ \t]
   }
   string_const[strlen(string_const)] = 0;
 
-  yylval = handle_string(string_const);
+  yylval.intg = handle_string(string_const);
   // free(string_const);
   return SCONSTnum;
 }
@@ -256,7 +253,7 @@ WS [ \t]
 {LETTER}({LETTER}|{DIGIT})* {
   increment_column();
 
-  yylval = handle_string(yytext);
+  yylval.intg = handle_string(yytext);
   return IDnum;
 }
 

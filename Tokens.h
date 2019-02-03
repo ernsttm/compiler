@@ -50,7 +50,6 @@
 #define VOIDnum 39
 
 // Define yyline/yycolumn global to ease driver implementation
-extern int yylval;
 extern int yyline;
 extern int yycolumn;
 extern int table_index;

@@ -1,6 +1,9 @@
 # Executable outputs
 lexer
+parser
 lex.yy.c
+y.output
+y.tab.c
 
 # Location of build/test outputs
 test_cases/

@@ -139,8 +139,8 @@ Expression : SimpleExpression GTnum SimpleExpression { $$ = MakeTree(GTOp, $1, $
            | SimpleExpression LTnum SimpleExpression { $$ = MakeTree(LTOp, $1, $3); }
            | SimpleExpression { $$ = $1; }
 
-SimpleExpression : PLUSnum SimpleExpression { $$ = MakeTree(AddOp, $2, MakeLeaf(DUMMYNode, 0)); }
-                 | MINUSnum SimpleExpression { $$ = MakeTree(UnaryNegOp, $2, MakeLeaf(DUMMYNode, 0)); }
+SimpleExpression : PLUSnum Term { $$ = MakeTree(AddOp, $2, MakeLeaf(DUMMYNode, 0)); }
+                 | MINUSnum Term { $$ = MakeTree(UnaryNegOp, $2, MakeLeaf(DUMMYNode, 0)); }
                  | SimpleExpression PLUSnum Term { $$ = MakeTree(AddOp, $1, $3); }
                  | SimpleExpression MINUSnum Term { $$ = MakeTree(SubOp, $1, $3); }
                  | SimpleExpression EQUALnum Term { $$ = MakeTree(EQOp, $1, $3); }

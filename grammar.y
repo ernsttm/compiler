@@ -121,16 +121,15 @@ VariableDeclId : VariableDeclId LBRACnum RBRACnum { $$ = $1; }
 
 VariableInitializer : Expression { $$ = $1; }
                     | ArrayInitializer { $$ = $1; }
-                    | ArrayCreationExpression { $$ = $1; }
+                    | INTnum ArrayCreationExpression { $$ = MakeTree(ArrayTypeOp, $2, MakeLeaf(INTEGERTNode, 0)); }
 
 ArrayInitializer : LBRACEnum ArrayVarInit RBRACEnum { $$ = MakeTree(ArrayTypeOp, $2, typeTree); }
 
 ArrayVarInit : ArrayVarInit COMMAnum VariableInitializer { $$ = MakeTree(CommaOp, $1, $3); }
              | VariableInitializer { $$ = MakeTree(CommaOp, MakeLeaf(DUMMYNode, 0), $1); }
 
-ArrayCreationExpression : INTnum ArrayCreationExpression { $$ = MakeTree(ArrayTypeOp, $2, MakeLeaf(INTEGERTNode, 0)); }
-                        | ArrayCreationExpression LBRACnum Expression RBRACnum { $$ = MakeTree(BoundOp, $1, $3); }
-                        | { $$ = MakeLeaf(DUMMYNode, 0); }
+ArrayCreationExpression : ArrayCreationExpression LBRACnum Expression RBRACnum { $$ = MakeTree(BoundOp, $1, $3); }
+                        | LBRACnum Expression RBRACnum { $$ = MakeTree(BoundOp, MakeLeaf(DUMMYNode, 0), $2); }
 
 Expression : SimpleExpression GTnum SimpleExpression { $$ = MakeTree(GTOp, $1, $3); }
            | SimpleExpression GEnum SimpleExpression { $$ = MakeTree(GEOp, $1, $3); }

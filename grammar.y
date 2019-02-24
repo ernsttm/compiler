@@ -152,7 +152,7 @@ Term : Term DIVIDEnum Factor { $$ = MakeTree(DivOp, $1, $3); }
      | Factor { $$ = $1; }
 
 Factor : UnsignedConstant { $$ = $1; }
-       | Variable { $$ = $1; };
+       | Variable { $$ = $1; }
        | MethodCallStatement { $$ = $1; }
        | LPARENnum Expression RPARENnum { $$ = $2; }
        | NOTnum Factor { $$ = $2; }
@@ -160,10 +160,13 @@ Factor : UnsignedConstant { $$ = $1; }
 UnsignedConstant : ICONSTnum { $$ = MakeLeaf(NUMNode, $1); }
                  | SCONSTnum { $$ = MakeLeaf(STRINGNode, $1); }
 
-Variable : IDnum Variable { $$ = MakeTree(VarOp, MakeLeaf(IDNode, $1), $2); }
+Variable : IDnum { $$ = MakeTree(VarOp, MakeLeaf(IDNode, $1), MakeLeaf(DUMMYNode, 0)); } 
+         | IDnum Variable { $$ = MakeTree(VarOp, MakeLeaf(IDNode, $1), $2); }
+         | LBRACnum ArrayIndexer RBRACnum { $$ = MakeTree(SelectOp, $2, MakeLeaf(DUMMYNode, 0)); }
          | LBRACnum ArrayIndexer RBRACnum Variable { $$ = MakeTree(SelectOp, $2, $4); }
          | DOTnum IDnum Variable { $$ = MakeTree(SelectOp, MakeTree(FieldOp, MakeLeaf(IDNode, $2), MakeLeaf(DUMMYNode, 0)), $3); }
-         | { $$ = MakeLeaf(DUMMYNode, 0); }
+         | DOTnum IDnum { $$ = MakeTree(SelectOp, MakeTree(FieldOp, MakeLeaf(IDNode, $2), MakeLeaf(DUMMYNode, 0)), MakeLeaf(DUMMYNode, 0));}
+
 
 ArrayIndexer : Expression COMMAnum ArrayIndexer { $$ = MakeTree(IndexOp, $1, $3); }
              | Expression { $$ = MakeTree(IndexOp, $1, MakeLeaf(DUMMYNode, 0)); }

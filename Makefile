@@ -10,6 +10,9 @@ lex :
 grammar : 
 	yacc grammar.y
 
+test_grammer : 
+	yacc test_grammer.y
+
 clean : 
 	-rm lexer lex.yy.c y.tab.c
 	-rm -r test_cases

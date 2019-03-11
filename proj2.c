@@ -18,6 +18,7 @@ Aggelos Varvitsiotis.
 #include <stdio.h>
 #include <stdlib.h>
 #include "proj2.h"
+#include "proj3.h"
 
 
 #define STRING_TABLE_SIZE 4096
@@ -389,12 +390,12 @@ void printtree (nd, depth)
                     indx = IntVal(nd);
                     if (indx > 0)
                     {
-                      id = indx; /* GetAttr(indx, NAME_ATTR); */
+                      id = GetAttr(indx, NAME_ATTR);
                       fprintf (treelst,"[STNode,%d,\"%s\"]\n", IntVal(nd),
                                                     getname(id));
                     }
                     else 
-                      fprintf (treelst,"[IDNode,%d,\"%s\"]\n", indx, "err");
+                      fprintf (treelst,"[IDNode,%d,\"%s\"]\n", indx, getname(id));
                     break;
 
     case INTEGERTNode:

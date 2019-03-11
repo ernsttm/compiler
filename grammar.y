@@ -6,6 +6,7 @@
   #include <stdio.h>
   #include <string.h>
   #include "proj2.h"
+  #include "proj3.h"
 
   // Defined limits on the string table 
   #define DISTINCT_IDS 500
@@ -14,9 +15,11 @@
   // Declare later functions to avoid compiler warnings
   int yylex();
   int yywrap();
+  int loc_str(char* str);
   void yyerror();
   int fileno(FILE* file);
   void printtree(tree file, int start);
+  void process_tree(tree root);
 
   // Define yyline/yycolumn global to ease driver implementation
   extern int yyline;
@@ -24,7 +27,9 @@
   extern int table_index;
   extern char string_table[STRING_TABLE_SIZE];
 
+  int main_count;
   int argType;
+  tree root;
   tree typeTree;
 %}
 
@@ -34,8 +39,7 @@
 %%
 
 Program : PROGRAMnum IDnum SEMInum ClassDecl EOFnum { 
-  $$ = MakeTree(ProgramOp, $4, MakeLeaf(IDNode, $2));
-  printtree($$, 0);
+  root = MakeTree(ProgramOp, $4, MakeLeaf(DUMMYNode, 0));
 }
 
 ClassDecl : ClassDecl CLASSnum IDnum ClassBody { $$ = MakeTree(ClassOp, $1, MakeTree(ClassDefOp, $4, MakeLeaf(IDNode, $3))); };
@@ -185,10 +189,334 @@ void print_string_table() {
   printf("\n");
 }
 
+int get_arg_count(tree node) {
+  int count = 0;
+  if (RArgTypeOp == node->NodeOpType || VArgTypeOp == node->NodeOpType) {
+    count++;
+  }
+
+  if (NULL != node->LeftC) {
+    count += get_arg_count(node->LeftC);
+  }
+  if (NULL != node->RightC) {
+    count += get_arg_count(node->RightC);
+  }
+
+  return count;
+}
+
+int get_index_count(tree node) {
+  int count = 0;
+
+  tree index_node = node;
+  while (IndexOp == index_node->NodeOpType) {
+    count++;
+    index_node = index_node->RightC;
+  }
+
+  return count;
+}
+
+int get_var_index_count(tree node) {
+  int count = 0;
+
+  tree select_node = node;
+  while (SelectOp == select_node->NodeOpType) {
+    if (IndexOp == select_node->LeftC->NodeOpType) {
+      count++;
+    }
+
+    select_node = select_node->RightC;
+  }
+
+  return count;
+}
+
+int get_call_arg_count(tree node) {
+  int count = 0;
+
+  tree arg_node = node;
+  while (CommaOp == arg_node->NodeOpType) {
+    count++;
+    arg_node = arg_node->RightC;
+  }
+
+  return count;
+}
+
+void handle_select(int id, tree node) {
+  if (SelectOp == node->NodeOpType) {
+    int field_id = 0;
+    if (FieldOp == node->LeftC->NodeOpType) {
+      tree field_id_node = node->LeftC->LeftC;
+
+      if (CLASS == GetAttr(id, KIND_ATTR)) {
+        field_id = LookUpField(id, field_id_node->IntVal);
+
+        if (0 != field_id) {
+          field_id_node->NodeKind = STNode;
+          field_id_node->IntVal = field_id;
+        }
+      } else if (VAR == GetAttr(id, KIND_ATTR)) {
+        tree type = GetAttr(id, TYPE_ATTR);
+        int type_id = type->LeftC->IntVal;
+        field_id = LookUpField(type_id, field_id_node->IntVal);
+
+        if (0 != field_id) {
+          field_id_node->NodeKind = STNode;
+          field_id_node->IntVal = field_id;
+        }
+      }
+    }
+
+    handle_select(field_id, node->RightC);
+  }
+}
+
+int find_arg_count(tree node) {
+  int kind = GetAttr(node->LeftC->IntVal, KIND_ATTR);
+  if (FUNC == kind || PROCE == kind) {
+    return GetAttr(node->LeftC->IntVal, ARGNUM_ATTR);
+  }
+
+  tree select_node = node->RightC;
+  while (SelectOp == select_node->NodeOpType) {
+    if (FieldOp == select_node->LeftC->NodeOpType) {
+      kind = GetAttr(select_node->LeftC->LeftC->IntVal, KIND_ATTR);
+
+      if (FUNC == kind || PROCE == kind) {
+        return GetAttr(select_node->LeftC->LeftC->IntVal, ARGNUM_ATTR);
+      }
+    }
+
+    select_node = select_node->RightC;
+  }
+
+  return -1;
+}
+
+int insert_table_entry(tree node) {
+  int id = InsertEntry(node->IntVal);
+
+  // The entry insert failed (indicating two names in scope)
+  if (0 != id) {
+    node->NodeKind = STNode;
+    node->IntVal = id;
+  }
+
+  return id;
+}
+
+void process_class_def(tree node) {
+  int id = insert_table_entry(node->RightC);
+
+  if (0 != id) {
+    SetAttr(id, KIND_ATTR, CLASS);
+  }
+
+  OpenBlock();
+  if (NULL != node->LeftC) {
+    process_tree(node->LeftC);
+  }
+  CloseBlock();
+}
+
+void process_decl_op(tree node) {
+  int id = insert_table_entry(node->RightC->LeftC);
+  tree type = node->RightC->RightC->LeftC;
+
+  if (0 != id) {
+    SetAttr(id, TYPE_ATTR, (uintptr_t)type);
+
+    if (IndexOp == type->RightC->NodeOpType) {
+      int count = get_index_count(type->RightC);
+      SetAttr(id, KIND_ATTR, ARR);
+      SetAttr(id, DIMEN_ATTR, count);
+    } else if (IDNode == type->LeftC->NodeKind) {
+      SetAttr(id, KIND_ATTR, VAR);
+      tree class = type->LeftC;
+      int id = LookUp(class->IntVal);
+
+      if (0 != id) {
+        class->NodeKind = STNode;
+        class->IntVal = id;
+      }
+    } else {
+      SetAttr(id, KIND_ATTR, VAR);
+    }
+  }
+
+  if (NULL != node->LeftC) {
+    process_tree(node->LeftC);
+  }
+  if (NULL != node->RightC) {
+    process_tree(node->RightC);
+  }
+}
+
+void process_method_op(tree node) {
+  int id = 0;
+  if (0 == strcmp("main", &(string_table[node->LeftC->LeftC->IntVal]))) {
+    main_count++;
+    if (1 == main_count) {
+      id = insert_table_entry(node->LeftC->LeftC);
+    } else {
+      int old_val = node->LeftC->LeftC->IntVal;
+      error_msg(REDECLARATION, old_val, old_val, old_val);
+      id = 0;
+    }
+  } else {
+    id = insert_table_entry(node->LeftC->LeftC); 
+  }
+
+  if (0 != id) {
+    tree type = node->LeftC->RightC->RightC;
+    if (DUMMYNode == type->NodeKind) {
+      SetAttr(id, KIND_ATTR, PROCE);
+    } else {
+      SetAttr(id, KIND_ATTR, FUNC);
+      SetAttr(id, TYPE_ATTR, (uintptr_t)type);
+    }
+
+    int count = get_arg_count(node->LeftC);
+    SetAttr(id, ARGNUM_ATTR, count);
+    SetAttr(id, TREE_ATTR, (uintptr_t)node);
+  }
+
+  OpenBlock();
+  if (NULL != node->LeftC) {
+    process_tree(node->LeftC);
+  }
+  if (NULL != node->RightC) {
+    process_tree(node->RightC);
+  }
+  CloseBlock();
+}
+
+void process_rarg_op(tree node) {
+  int id = insert_table_entry(node->LeftC->LeftC);
+
+  if (0 != id) {
+    SetAttr(id, KIND_ATTR, REF_ARG);
+    SetAttr(id, TYPE_ATTR, (uintptr_t)node->LeftC->RightC);
+  }
+
+  if (NULL != node->RightC) {
+    process_tree(node->RightC);
+  }
+}
+
+void process_varg_op(tree node) {
+  int id = insert_table_entry(node->LeftC->LeftC);
+
+  if (0 != id) {
+    SetAttr(id, KIND_ATTR, VALUE_ARG);
+    SetAttr(id, TYPE_ATTR, (uintptr_t)node->LeftC->RightC);
+  }
+
+  if (NULL != node->RightC) {
+    process_tree(node->RightC);
+  }
+}
+
+void process_var_op(tree node) {
+  tree id_node = node->LeftC;
+  int old_val = id_node->IntVal;
+  int id = LookUp(id_node->IntVal);
+
+  if (0 != id) {
+    id_node->NodeKind = STNode;
+    id_node->IntVal = id;
+
+    handle_select(id, node->RightC);
+
+    // Verify the number of indices matches the expected.
+    if (ARR == GetAttr(id, KIND_ATTR)) {
+      int indices = get_var_index_count(node->RightC);
+
+      if (indices != GetAttr(id, DIMEN_ATTR)) {
+        error_msg(INDX_MIS, old_val, old_val, old_val);
+      }
+    }
+  }
+
+  if (NULL != node->LeftC) {
+    process_tree(node->LeftC);
+  }
+  if (NULL != node->RightC) {
+    process_tree(node->RightC);
+  }
+}
+
+void process_call_op(tree node) {
+  int old_val = node->LeftC->LeftC->IntVal;
+
+  // First process the var op for the function called.
+  process_var_op(node->LeftC);
+
+  // Then retrieve the desired argument count.
+  int desired_args = find_arg_count(node->LeftC);
+
+  // Finally count the passed arguments, and see if they are different. 
+  int found_args = get_call_arg_count(node->RightC);
+  if (desired_args != found_args) {
+    error_msg(ARGUMENTS_NUM2, old_val, old_val, old_val);
+  }
+
+  process_tree(node->RightC);
+}
+
+void process_tree(tree node) {
+  if (ClassDefOp == node->NodeOpType) {
+    process_class_def(node);
+  } else if (DeclOp == node->NodeOpType) {
+    process_decl_op(node);
+  } else if (MethodOp == node->NodeOpType) {
+    process_method_op(node);
+  } else if (RArgTypeOp == node->NodeOpType) { 
+    process_rarg_op(node);
+  } else if (VArgTypeOp == node->NodeOpType) {
+    process_varg_op(node);
+  } else if (VarOp == node->NodeOpType) {
+    process_var_op(node);
+  } else if (RoutineCallOp == node->NodeOpType) { 
+    process_call_op(node);
+  } else {
+    // Recurse through the other nodes in the tree. 
+    if (NULL != node->LeftC) {
+      process_tree(node->LeftC);
+    }
+    if (NULL != node->RightC) {
+      process_tree(node->RightC);
+    }
+  }
+}
+
+int loc_str(char* str) {
+  for (int i = 0; i < table_index; i++) {
+    if (0 == strcmp(&(string_table[i]), str)) {
+      return i;
+    }
+    i += strlen(&string_table[i]);
+  }
+
+  return -1;
+}
+
 int main() {
+  main_count = 0;
   treelst = stdout;
   yyparse();
-  print_string_table();
+
+  // Initialize the symbol table.
+  STInit();
+  process_tree(root);
+  
+  // Print the symbol table 
+  STPrint();
+
+  // Print the tree
+  printtree(root, 0);
 }
 
 void yyerror(char* str) {

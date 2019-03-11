@@ -238,6 +238,7 @@ int
 InsertEntry(id)
   int id;
 {
+  // printf("Ids claimed : %d\n", id);
   /* id is already declared in the current block */
   if (LookUpHere(id))
   {
@@ -428,6 +429,7 @@ SetAttr(st_ptr, attr_num, attr_val)
     return;
   }
 
+
   p = &st[st_ptr];
   next = st[st_ptr];
 
@@ -443,8 +445,10 @@ SetAttr(st_ptr, attr_num, attr_val)
       break;
   }
 
+
   if (attr_top >= ATTR_SIZE-1)
     error_msg(ATTR_OVERFLOW, ABORT,0, 0);
+
 
   attr_top++;
   attrarray[attr_top].attr_num = attr_num;

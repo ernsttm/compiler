@@ -1,10 +1,5 @@
+#include <stdbool.h>
 #include <stdint.h>
-
-#define false 0
-#define true 1
-#define FALSE 0
-#define TRUE 1
-#define bool char
 
 #define STACK_SIZE 100
 #define ST_SIZE 500

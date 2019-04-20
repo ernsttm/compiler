@@ -1,3 +1,7 @@
+
+#ifndef PROJ3_H
+#define PROJ3_H
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -71,6 +75,9 @@
 #define DIMEN_ATTR   9
 #define ARGNUM_ATTR 10
 
+#define SIZE_ATTR 12
+#define CLASS_DEF_ATTR 13
+
 /*
  * the possible values of attribute kind_attr 
  */
@@ -136,3 +143,5 @@ void SetAttr(int, int, uintptr_t);
 void STPrint();
 void Push(int, int, int, int);
 char *seq_str(int);
+
+#endif // PROJ3_H

@@ -1,4 +1,8 @@
 /* proj2.h */
+
+#ifndef PROJ2_H
+#define PROJ2_H
+
 typedef struct treenode {       
   /* syntax tree node struct */
   int NodeKind, NodeOpType, IntVal;
@@ -88,3 +92,5 @@ void SetRightChild(tree, tree); */
 
 int NodeKind(tree T);
 int IsNull(tree T);
+
+#endif // PROJ2_H

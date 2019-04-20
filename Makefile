@@ -1,5 +1,5 @@
 build : lex grammar
-	gcc -std=c99 -g -o parser y.tab.c proj2.c proj3.c
+	gcc -std=c99 -g -o parser y.tab.c proj2.c proj3.c proj4.c
 
 proj1_build : lex
 	gcc -std=c99 -o lexer lex.yy.c driver.c
@@ -24,4 +24,4 @@ test_pase_two : clean build
 	./test_phase_two.sh
 
 test : clean build
-	./test_phase_three.sh
+	./test_phase_four.sh

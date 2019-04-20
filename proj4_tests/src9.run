@@ -1,0 +1,69 @@
+SPIM Version 6.0 of July 21, 1997
+Copyright 1990-1997 by James R. Larus (larus@cs.wisc.edu).
+All Rights Reserved.
+See the file README for a full copyright notice.
+Loaded: ./trap.handler
+Before x=
+5
+After x=
+25
+Before t1=
+12
+Before x=
+5
+After x=
+25
+After t1=
+1024
+Before x=
+22
+After x=
+484
+Before t1=
+133
+Before x=
+25
+After x=
+625
+After t1=
+1024
+p21.p1.x=
+625
+Before x=
+5
+After x=
+25
+p20.parr0:
+0
+p20.parr0:
+1
+p20.parr0:
+2
+p20.parr0:
+3
+p20.parr0:
+4
+p20.parr0:
+5
+p20.parr0:
+6
+p20.parr0:
+7
+p20.parr0:
+8
+p20.parr0:
+9
+p20.parr0:
+10
+p20.parr0:
+11
+Before t1=
+12
+Before x=
+5
+After x=
+25
+After t1=
+1024
+p20.x=
+25

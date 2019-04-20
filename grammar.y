@@ -7,10 +7,13 @@
   #include <string.h>
   #include "proj2.h"
   #include "proj3.h"
+  #include "proj4.h"
 
   // Defined limits on the string table 
   #define DISTINCT_IDS 500
   #define STRING_TABLE_SIZE 4096
+
+  #define INT_SIZE 4
 
   // Declare later functions to avoid compiler warnings
   int yylex();
@@ -27,8 +30,13 @@
   extern int table_index;
   extern char string_table[STRING_TABLE_SIZE];
 
+  bool classVar;
   int main_count;
   int argType;
+  int classOffset;
+  int methodOffset;
+  int variableOffset;
+  int curClassId;
   tree root;
   tree typeTree;
 %}
@@ -217,6 +225,36 @@ int get_index_count(tree node) {
   return count;
 }
 
+int get_array_size(tree node) {
+  int size = 0;
+
+  tree size_node = node;
+  while (DUMMYNode != size_node->NodeKind) {
+    if (BoundOp == size_node->NodeOpType) {
+      int bound_size = size_node->RightC->IntVal;
+      size = 0 == size ? bound_size : size * bound_size;
+    } else if (CommaOp == size_node->NodeOpType) {
+      size++;
+    }
+
+    size_node = size_node->LeftC;
+  }
+
+  return size * INT_SIZE;
+}
+
+int get_class_size(int id) {
+  int size = 0;
+
+  int var_id = id + 1;
+  while (VAR == GetAttr(var_id, KIND_ATTR)) {
+    size++;
+    var_id++;
+  }
+
+  return size * INT_SIZE;
+}
+
 int get_var_index_count(tree node) {
   int count = 0;
 
@@ -309,10 +347,14 @@ int insert_table_entry(tree node) {
 
 void process_class_def(tree node) {
   int id = insert_table_entry(node->RightC);
+  classVar = true;
+  classOffset = 0;
 
   if (0 != id) {
     SetAttr(id, KIND_ATTR, CLASS);
   }
+
+  curClassId = id;
 
   OpenBlock();
   if (NULL != node->LeftC) {
@@ -328,10 +370,13 @@ void process_decl_op(tree node) {
   if (0 != id) {
     SetAttr(id, TYPE_ATTR, (uintptr_t)type);
 
+    int size = 0;
     if (IndexOp == type->RightC->NodeOpType) {
       int count = get_index_count(type->RightC);
       SetAttr(id, KIND_ATTR, ARR);
       SetAttr(id, DIMEN_ATTR, count);
+
+      size = get_array_size(node->RightC->RightC->RightC->LeftC);
     } else if (IDNode == type->LeftC->NodeKind) {
       SetAttr(id, KIND_ATTR, VAR);
       tree class = type->LeftC;
@@ -341,9 +386,25 @@ void process_decl_op(tree node) {
         class->NodeKind = STNode;
         class->IntVal = id;
       }
+
+      size = GetAttr(id, 11);
     } else {
       SetAttr(id, KIND_ATTR, VAR);
+
+      size = INT_SIZE;
     }
+
+    int offsetValue;
+    if (classVar) {
+      offsetValue = classOffset;
+      classOffset += size;
+      SetAttr(curClassId, 11, classOffset);
+    } else {
+      methodOffset -= size;
+      offsetValue = methodOffset;
+    }
+
+    SetAttr(id, OFFSET_ATTR, offsetValue);
   }
 
   if (NULL != node->LeftC) {
@@ -368,6 +429,10 @@ void process_method_op(tree node) {
   } else {
     id = insert_table_entry(node->LeftC->LeftC); 
   }
+
+  classVar = false;
+  methodOffset = 0;
+  variableOffset = 12;
 
   if (0 != id) {
     tree type = node->LeftC->RightC->RightC;
@@ -399,6 +464,8 @@ void process_rarg_op(tree node) {
   if (0 != id) {
     SetAttr(id, KIND_ATTR, REF_ARG);
     SetAttr(id, TYPE_ATTR, (uintptr_t)node->LeftC->RightC);
+    SetAttr(id, OFFSET_ATTR, variableOffset);
+    variableOffset += INT_SIZE;
   }
 
   if (NULL != node->RightC) {
@@ -412,6 +479,8 @@ void process_varg_op(tree node) {
   if (0 != id) {
     SetAttr(id, KIND_ATTR, VALUE_ARG);
     SetAttr(id, TYPE_ATTR, (uintptr_t)node->LeftC->RightC);
+    SetAttr(id, OFFSET_ATTR, variableOffset);
+    variableOffset += INT_SIZE;
   }
 
   if (NULL != node->RightC) {
@@ -503,7 +572,7 @@ int loc_str(char* str) {
   return -1;
 }
 
-int main() {
+int main(int argc, char** argv) {
   main_count = 0;
   treelst = stdout;
   yyparse();
@@ -513,10 +582,12 @@ int main() {
   process_tree(root);
   
   // Print the symbol table 
-  STPrint();
-
-  // Print the tree
-  printtree(root, 0);
+  if (2 == argc) {
+    STPrint();
+    printtree(root, 0);
+  }
+  
+  generate_code(root);
 }
 
 void yyerror(char* str) {

@@ -8,6 +8,7 @@
 #define MAX_LABEL_SIZE 100
 
 int class_id = 0;
+int method_id = 0;
 int stack_size = 0;
 bool method_invocation = false;
 
@@ -39,10 +40,6 @@ int get_initial_value(tree initial_node) {
 extern int st_top;
 char** labels = NULL;
 void set_label(int id, char* label) {
-  if (NULL == labels) {
-    labels = malloc(sizeof(char*) * st_top);
-  }
-
   labels[id] = label;
 }
 
@@ -51,11 +48,18 @@ void get_address(tree root) {
   if (0 == GetAttr(id, NEST_ATTR)) {
     printf("\tla $v1 %s\n", labels[id]);
   } else if (1 == GetAttr(id, NEST_ATTR)) {
-    if (method_invocation) {
-      printf("\tlw $v1 %d($fp)\n", GetAttr(id, 11));
-    } else {
-      printf("\tla $v1 %s\n", labels[class_id]);
+    int offset = 8;
+    int var_id = id + 1;
+    while (var_id <= st_top && 2 == GetAttr(var_id, NEST_ATTR)) {
+      if (REF_ARG == GetAttr(var_id, KIND_ATTR) || VALUE_ARG == GetAttr(var_id, KIND_ATTR)) {
+        if (GetAttr(var_id, OFFSET_ATTR) > offset) {
+          offset = GetAttr(var_id, OFFSET_ATTR);
+        }
+      }
+
+      var_id++;
     }
+    printf("\tlw $v1 %d($fp)\n", offset);  
     printf("\taddi $v1 $v1 %d\n", GetAttr(id, OFFSET_ATTR));
   } else {
     int offset = GetAttr(id, OFFSET_ATTR);
@@ -77,12 +81,12 @@ void get_address(tree root) {
       int field_id = select_node->LeftC->LeftC->IntVal;
 
       if (FUNC != GetAttr(field_id, KIND_ATTR) && PROCE != GetAttr(field_id, KIND_ATTR)) {
-        printf("\taddi $v1 %d\n", GetAttr(field_id, OFFSET_ATTR));
+        printf("\taddi $v1 $v1 %d\n", GetAttr(field_id, OFFSET_ATTR));
       }
     } else {
       if (NUMNode == select_node->LeftC->LeftC->NodeKind) {
         int index = select_node->LeftC->LeftC->IntVal;
-        printf("\taddi $v1 %d\n", 4 * index);
+        printf("\taddi $v1 $v1 %d\n", 4 * index);
       } else {
         printf("\taddi $sp $sp -4\n");
         printf("\tsw $v1 ($sp)\n");
@@ -430,12 +434,25 @@ void generate_func_call(tree root) {
   } else {
     int method_id = root->LeftC->LeftC->IntVal;
     if (DUMMYNode != root->LeftC->RightC->NodeKind) { 
+      tree select_node = root->LeftC->RightC;
+      while (SelectOp == select_node->RightC->NodeOpType) {
+        select_node = select_node->RightC;
+      }
+
       get_address(root->LeftC);
-      method_invocation = true;
       printf("\taddi $sp $sp -4\n");
       printf("\tsw $v1 ($sp)\n");
-      method_id = root->LeftC->RightC->LeftC->LeftC->IntVal;
-    } 
+      method_id = select_node->LeftC->LeftC->IntVal;
+    } else {
+      int class_id = method_id - 1;
+      while (class_id >= 0 && 0 != GetAttr(class_id, NEST_ATTR)) {
+        class_id--;
+      }
+
+      printf("\tla $v1 %s\n", labels[class_id]);
+      printf("\taddi $sp $sp -4\n");
+      printf("\tsw $v1 ($sp)\n");
+    }
 
     // Push any arguments unto the stack
     if (DUMMYNode != root->RightC->NodeKind) {
@@ -457,10 +474,8 @@ void generate_func_call(tree root) {
       param_node = param_node->RightC;
     }
 
-    if (method_invocation) {
-      method_invocation = false;
-      printf("\taddi $sp $sp 4\n");
-    }
+    // Pop the stack for the instance's memory location
+    printf("\taddi $sp $sp 4\n"); 
   }
 }
 
@@ -521,7 +536,7 @@ void generate_return(tree root) {
  */
 void generate_method_header(tree root) {
   int id = root->LeftC->LeftC->IntVal;
-
+  method_id = id;
   // Generate the appropriate label for the function
   int loc = GetAttr(id, NAME_ATTR);
   printf("%s:\n", &string_table[loc]);
@@ -539,6 +554,22 @@ void generate_method_header(tree root) {
     varId++;  
   }
   SetAttr(id, SIZE_ATTR, offset);
+
+  // If this is main jerry rig the stack to account for the class
+  // variable
+  if (0 == strcmp("main", &string_table[loc])) {
+    int class_id = id - 1;
+    while (class_id >= 0 && 0 != GetAttr(class_id, NEST_ATTR)) {
+      class_id--;
+    }
+
+    if (NULL != labels[class_id]) {
+      printf("\tla $v1 %s\n", labels[class_id]);
+    }
+    printf("\taddi $sp $sp -4\n");
+    printf("\tsw $v1 ($sp)\n");
+  }
+
   printf("\taddi $sp $sp -4\n");
   printf("\tsw $fp ($sp)\n");
   printf("\taddi $sp $sp -4\n");
@@ -570,6 +601,10 @@ void generate_method_footer(tree root) {
   printf("\taddi $sp $sp 4\n");
   printf("\tlw $fp ($sp)\n");
   printf("\taddi $sp $sp 4\n");
+
+  if (0 == strcmp("main", &string_table[GetAttr(id, NAME_ATTR)])) {
+    printf("\taddi $sp $sp 4\n");
+  }
 
   printf("\tjr $ra\n");
 }
@@ -624,6 +659,13 @@ void process_node(tree root) {
 }
 
 void generate_code(tree root) {
+  // Initialize the label store
+  labels = malloc(sizeof(char*) * st_top);
+
+  for (int i = 0; i < st_top; i++) {
+    labels[i] = NULL;
+  }
+
   generate_header();
   process_node(root);
 }

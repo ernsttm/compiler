@@ -582,12 +582,11 @@ int main(int argc, char** argv) {
   process_tree(root);
   
   // Print the symbol table 
-  if (2 == argc) {
+  if (2 == argc && 0 == strcmp("-o", argv[1])) {
     STPrint();
-    printtree(root, 0);
+  } else {
+    generate_code(root);
   }
-  
-  generate_code(root);
 }
 
 void yyerror(char* str) {

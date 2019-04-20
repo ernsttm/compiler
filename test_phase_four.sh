@@ -10,7 +10,7 @@ alias spim="~/school_work/compilers/spim.linux -trap_file ~/school_work/compiler
 mkdir -p "${OUTPUT_DIR}"
 
 test_offset() {
-  cat ${INPUT_DIR}/$1 | ./parser > ${OUTPUT_DIR}/$1.test.out
+  cat ${INPUT_DIR}/$1 | ./parser -o > ${OUTPUT_DIR}/$1.test.out
 
   TEST_OUTPUT=$(diff -b ${OUTPUT_DIR}/$1.test.out ${INPUT_DIR}/$1.out)
   if [ -z "${TEST_OUTPUT}" ]; then
@@ -31,13 +31,26 @@ test_execution() {
 
   TEST_OUTPUT=$(diff -b -I 'Loaded:*' ${OUTPUT_DIR}/$1.test.out ${INPUT_DIR}/$1.run)
   if [ -z "${TEST_OUTPUT}" ]; then
-    echo "$1 test passes"
+    echo "$1 run passes"
   else
     echo "${TEST_OUTPUT}"
   fi
 }
 
-# Test the offset of the test files
+# Test the offset generation of the various files.
+test_offset "src0"
+test_offset "src1"
+test_offset "src2"
+test_offset "src3"
+test_offset "src4"
+test_offset "src5"
+test_offset "src6"
+test_offset "src7"
+test_offset "src8"
+test_offset "src9"
+test_offset "src10"
+
+# Test the run output of the test files
 test_execution "src0"
 test_execution "src1"
 test_execution "src2"
